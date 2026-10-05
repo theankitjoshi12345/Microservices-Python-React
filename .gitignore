@@ -1,0 +1,17 @@
+# Local Python environments and package installs
+**/.venv/
+**/node_modules/
+
+# Generated and machine-local files
+**/__pycache__/
+*.py[cod]
+.DS_Store
+**/build/
+**/coverage/
+
+# Local database volumes and editor preferences
+**/.dbdata/
+**/.vscode/
+**/.env
+**/.env.*
+!**/.env.example
