@@ -4,7 +4,6 @@ from .serializers import ProductSerializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 import random
-from .producer import publish
 
 class ProductViewSet(viewsets.ViewSet):
     
@@ -17,7 +16,6 @@ class ProductViewSet(viewsets.ViewSet):
         serializer = ProductSerializer(data = request.data)
         serializer.is_valid(raise_exception = True)
         serializer.save()
-        publish('product_created', serializer.data) 
         return Response(serializer.data, status = status.HTTP_201_CREATED)
  
     def retrieve(self, request, pk=None): #/api/products/<str:id>
@@ -29,14 +27,12 @@ class ProductViewSet(viewsets.ViewSet):
         product = Product.objects.get(id=pk)
         serializer = ProductSerializer(instance=product, data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save() 
-        publish('product_updated', serializer.data) 
+        serializer.save()
         return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
         
     def destroy(self, request, pk=None): #/api/products/<str:id>
         product = Product.objects.get(id=pk)
         product.delete()
-        publish('product_deleted', pk) 
         return Response(status = status.HTTP_204_NO_CONTENT) 
 
 class UserAPIView(APIView):

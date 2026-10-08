@@ -5,7 +5,6 @@ from flask_cors import CORS
 from flask_migrate import Migrate
 import requests
 import os
-from producer import publish
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = (
@@ -47,7 +46,6 @@ def like(id):
         productUser = ProductUser(user_id=json['id'], product_id=id)
         db.session.add(productUser)
         db.session.commit()
-        publish("Product liked", id)
     except:
         abort(400, "You already liked this product.")     
     return jsonify({

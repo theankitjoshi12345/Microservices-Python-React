@@ -11,20 +11,8 @@ services:
     environment:
       DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in main/.env}
     depends_on:
-      db: # 👈 FIXED: No hyphen here!
+      db:
         condition: service_healthy
-
-  queue:
-    build: 
-      context: .
-      dockerfile: Dockerfile
-    command: 'python consumer.py' 
-    environment:
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in main/.env}
-    depends_on: 
-      db: 
-        condition: service_healthy
-
   db:
     image: mysql:8.0
     restart: always
