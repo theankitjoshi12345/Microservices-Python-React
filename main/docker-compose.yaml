@@ -1,5 +1,5 @@
 services:
-  backend:
+  main:
     build:
       context: .
       dockerfile: Dockerfile
@@ -13,6 +13,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    command: 'python consumer.py'
+    depends_on:
+      db:
+        condition: service_healthy
+
+
   db:
     image: mysql:8.0
     restart: always

@@ -15,6 +15,15 @@ services:
       db:
         condition: service_healthy
 
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: 'python consumer.py'
+    depends_on:
+      db:
+        condition: service_healthy
+
   db:
     image: mysql:8.0
     restart: always
