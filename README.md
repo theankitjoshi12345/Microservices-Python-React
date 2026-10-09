@@ -4,6 +4,22 @@ This project uses Django, Flask, RabbitMQ, MySQL, and a React/Vite frontend to m
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the current system design and local setup.
 
+## Start the complete stack
+
+After creating `admin/.env` and `main/.env` from their `.env.example` files, start the Admin API and worker, Main API and worker, both MySQL databases, and the React frontend with one command:
+
+```bash
+docker compose up --build
+```
+
+The applications are then available at:
+
+- React: http://localhost:5173
+- Admin API: http://localhost:8000
+- Main API: http://localhost:8001
+
+Use `docker compose down` to stop the stack. Database data is retained in the existing `admin/.dbdata` and `main/.dbdata` directories.
+
 ## Frontend
 
 The React/Vite app is in `react-vite-frontend/`. It uses Tailwind CSS and provides:

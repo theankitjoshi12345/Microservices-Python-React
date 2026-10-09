@@ -1,0 +1,152 @@
+name: microservices-python-react
+
+services:
+  admin-db:
+    image: mysql:8.0
+    restart: unless-stopped
+    env_file:
+      - ./admin/.env
+    environment:
+      MYSQL_DATABASE: admin
+    volumes:
+      # Retains the existing local Admin database created by the previous stack.
+      - ./admin/.dbdata:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  main-db:
+    image: mysql:8.0
+    restart: unless-stopped
+    env_file:
+      - ./main/.env
+    environment:
+      MYSQL_DATABASE: main
+    volumes:
+      # Retains the existing local Main database created by the previous stack.
+      - ./main/.dbdata:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  admin-migrate:
+    build:
+      context: ./admin
+    command: python manage.py migrate --noinput
+    env_file:
+      - ./admin/.env
+    environment:
+      DB_HOST: admin-db
+    depends_on:
+      admin-db:
+        condition: service_healthy
+    restart: "no"
+
+  main-migrate:
+    build:
+      context: ./main
+    command: flask --app main db upgrade
+    env_file:
+      - ./main/.env
+    environment:
+      DB_HOST: main-db
+    depends_on:
+      main-db:
+        condition: service_healthy
+    restart: "no"
+
+  admin-api:
+    build:
+      context: ./admin
+    command: python manage.py runserver 0.0.0.0:8000
+    env_file:
+      - ./admin/.env
+    environment:
+      DB_HOST: admin-db
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./admin:/app
+    depends_on:
+      admin-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  admin-worker:
+    build:
+      context: ./admin
+    command: python consumer.py
+    env_file:
+      - ./admin/.env
+    environment:
+      DB_HOST: admin-db
+    volumes:
+      - ./admin:/app
+    depends_on:
+      admin-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  main-api:
+    build:
+      context: ./main
+    command: python main.py
+    env_file:
+      - ./main/.env
+    environment:
+      ADMIN_USER_API_URL: http://admin-api:8000/api/user/
+      DB_HOST: main-db
+    ports:
+      - "8001:5001"
+    volumes:
+      - ./main:/app
+    depends_on:
+      admin-api:
+        condition: service_started
+      main-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  main-worker:
+    build:
+      context: ./main
+    command: python consumer.py
+    env_file:
+      - ./main/.env
+    environment:
+      DB_HOST: main-db
+    volumes:
+      - ./main:/app
+    depends_on:
+      main-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./react-vite-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./react-vite-frontend:/app
+      - frontend_node_modules:/app/node_modules
+    depends_on:
+      admin-api:
+        condition: service_started
+      main-api:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  frontend_node_modules:

@@ -104,7 +104,7 @@ Required values:
 | `admin/.env` | `DJANGO_SECRET_KEY`, `MYSQL_ROOT_PASSWORD` |
 | `main/.env` | `MYSQL_ROOT_PASSWORD` |
 
-Compose maps `MYSQL_ROOT_PASSWORD` to `DB_PASSWORD` inside the Django and Flask containers. That is the value used by their database connection settings.
+The application containers use `DB_PASSWORD` when supplied, otherwise fall back to `MYSQL_ROOT_PASSWORD`. This lets the root Compose stack load each service's own ignored `.env` file without duplicating secrets. `DB_HOST` is optional: the standalone service Compose files retain `db`, while the root stack supplies the appropriate service name.
 
 The current Pika clients contain the RabbitMQ connection URL in source code. This must be moved to an ignored environment variable before sharing the repository or deploying it; credentials do not belong in source control.
 
@@ -117,21 +117,23 @@ Migrations are only required after model/schema changes. They do not synchronize
 
 ## Local operations
 
-Start the stacks independently:
+Start the complete local stack from the repository root:
 
 ```bash
-cd admin && docker compose up --build
-cd main && docker compose up --build
+docker compose up --build
 ```
 
-The queue workers run as separate Compose services. Because the Main queue service copies source files into its image rather than mounting the project directory, rebuild and recreate it after changing `main/consumer.py`:
+This standard Compose entry point starts both APIs, both queue workers, both databases, runs database migrations before application services start, and starts the React development server. It also uses Docker-internal service discovery for the Main service's Admin user lookup (`admin-api:8000`) rather than the Mac-specific `docker.for.mac.localhost` address.
+
+To stop the stack while retaining database data:
 
 ```bash
-cd main
-docker compose up -d --build --force-recreate queue
+docker compose down
 ```
 
-Run the frontend separately:
+The legacy `admin/docker-compose.yaml` and `main/docker-compose.yaml` remain available for running an individual backend stack.
+
+For frontend-only work, it can still be run outside Docker:
 
 ```bash
 cd react-vite-frontend
