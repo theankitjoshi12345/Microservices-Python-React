@@ -37,7 +37,7 @@ The project has three applications and two independently owned MySQL databases. 
 | Main API | `main/` / `main` | Flask read API and like endpoint | 8001 |
 | Main worker | `main/` / `queue` | Consumes product events from the `main` queue | — |
 | Main database | `main/` / `db` | MySQL read-model and product-like database | 3307 |
-| Client | `react-crud/` | React browser application | 3000 |
+| Client | `react-vite-frontend/` | React/Vite browser application | 5173 |
 
 ## Data ownership
 
@@ -45,9 +45,11 @@ The project has three applications and two independently owned MySQL databases. 
 | --- | --- | --- |
 | Products | Admin `product_product` table | Replicated into Main `product` table for reads |
 | Users | Admin `product_user` table | Main stores only a user ID when recording a like |
-| Likes | Main `product_user` table | Not currently written back to Admin |
+| Likes | Main `product_user` table | A `product_liked` event increments Admin `product_product.likes` |
 
 The databases are intentionally not a shared schema. Main must not write directly to Admin's database, and Admin must not write directly to Main's database.
+
+The Main `product` read model does not yet store or return the synchronized like total. The storefront can update its count for the current browser session after a successful like, but a refresh does not yet return the authoritative total. This is tracked in [issue #2](https://github.com/theankitjoshi12345/Microservices-Python-React/issues/2).
 
 ## Product synchronization flow
 
@@ -70,7 +72,21 @@ Current operational boundaries:
 - The consumer currently expects create events before update/delete events. An update for an absent Main product raises an error rather than inventing a product.
 - A database commit followed by a worker failure before acknowledgement can cause a message to be delivered again. Future work should make create handling idempotent.
 - The current like flow asks Admin for a random user through `/api/user`; it is demonstration behavior, not authentication.
-- Likes are stored only in Main and do not update Admin's product `likes` field.
+- Main publishes `product_liked` messages to the `admin` queue, and the Admin worker increments the product's `likes` field.
+- The Admin like worker uses manual acknowledgement and acknowledges only after incrementing the product's like count. Failures still need retry/dead-letter handling for production use.
+
+## React application
+
+`react-vite-frontend/` is a Vite + React + Tailwind CSS single-page application.
+
+| Route | Purpose | API |
+| --- | --- | --- |
+| `/` | Storefront product cards and likes | Main API (`localhost:8001`) |
+| `/admin/products` | Product list with delete action | Admin API (`localhost:8000`) |
+| `/admin/products/create` | Product creation form | Admin API |
+| `/admin/products/:id/edit` | Product edit form | Admin API |
+
+The application uses `BrowserRouter`, confirmation prompts before update/delete actions, and local state updates after successful API responses. It has no login or identity state yet.
 
 ## Runtime configuration
 
@@ -114,3 +130,16 @@ The queue workers run as separate Compose services. Because the Main queue servi
 cd main
 docker compose up -d --build --force-recreate queue
 ```
+
+Run the frontend separately:
+
+```bash
+cd react-vite-frontend
+pnpm install
+pnpm dev
+```
+
+## Next steps
+
+1. Implement [actual user authentication](https://github.com/theankitjoshi12345/Microservices-Python-React/issues/1) and remove the random-user like flow.
+2. Implement [synchronized Main API like counts](https://github.com/theankitjoshi12345/Microservices-Python-React/issues/2).

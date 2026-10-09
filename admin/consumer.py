@@ -22,7 +22,9 @@ def callback(ch, method, properties, body):
     product.save()
     print("Product likes increased")
 
-channel.basic_consume(queue='admin', on_message_callback=callback, auto_ack=True )
+    ch.basic_ack(delivery_tag=method.delivery_tag)
+
+channel.basic_consume(queue='admin', on_message_callback=callback, auto_ack=False)
 
 print('Started Consuming')
 channel.start_consuming()
