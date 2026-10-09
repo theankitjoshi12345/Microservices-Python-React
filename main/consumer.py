@@ -23,6 +23,7 @@ def callback(ch, method, properties, body):
                     image=data["image"],
                 )
                 db.session.add(product)
+                print("Product Created")
 
             elif properties.type == "product_updated":
                 product = db.session.get(Product, data["id"])
@@ -30,11 +31,14 @@ def callback(ch, method, properties, body):
                     raise ValueError(f"Product {data['id']} does not exist")
                 product.title = data["title"]
                 product.image = data["image"]
+                print("Product Updated")
+
 
             elif properties.type == "product_deleted":
                 product = db.session.get(Product, data)
                 if product is not None:
                     db.session.delete(product)
+                print("Product Deleted")
 
             else:
                 raise ValueError(f"Unsupported message type: {properties.type}")

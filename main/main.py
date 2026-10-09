@@ -6,6 +6,8 @@ from flask_migrate import Migrate
 import requests
 import os
 
+from producer import publish
+
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = (
     f"mysql://root:{os.environ['DB_PASSWORD']}@db/main"
@@ -40,12 +42,14 @@ def index():
 
 @app.route('/api/products/<int:id>/like', methods=['POST'])
 def like(id):
-    req = requests.get('http://docker.for.mac.localhost:8000/api/user')
+    req = requests.get('http://docker.for.mac.localhost:8000/api/user/')
     json = req.json()
     try: 
         productUser = ProductUser(user_id=json['id'], product_id=id)
         db.session.add(productUser)
         db.session.commit()
+        publish('product_liked', id)
+
     except:
         abort(400, "You already liked this product.")     
     return jsonify({
